@@ -1,6 +1,6 @@
 # Building Language VM
 
-Coding along with the blog articles [](https://blog.subnetzero.io/post/building-language-vm-part-01/).
+Coding along with the blog articles [So You Want to Build a Language VM](https://blog.subnetzero.io/post/building-language-vm-part-01/).
 Big thanks to the author.
 
 # Prerequisites
