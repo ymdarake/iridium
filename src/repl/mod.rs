@@ -1,7 +1,6 @@
 pub use crate::vm::VM;
 use std;
-use std::io::Write;
-use std::io::{self};
+use std::io::{BufRead, Write};
 use std::num::ParseIntError;
 use std::result::Result;
 
@@ -18,56 +17,84 @@ impl REPL {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run<R, W>(&mut self, mut reader: R, mut writer: W)
+    where
+        R: BufRead,
+        W: Write,
+    {
         println!("Welcome to Iridium! Let's be productive!");
-        loop {
-            let mut buffer = String::new();
-            let stdin = io::stdin();
-            print!(">>> ");
-            io::stdout().flush().expect("Unable to flush stdout");
-            stdin
-                .read_line(&mut buffer)
-                .expect("Unable to read line from user");
-            let buffer = buffer.trim();
+        let mut is_done = false;
+        while !is_done {
+            is_done = self.run_once(&mut reader, &mut writer);
+        }
+    }
 
-            self.command_buffer.push(buffer.to_string());
+    pub fn run_once<R, W>(&mut self, mut reader: R, mut writer: W) -> bool
+    where
+        R: BufRead,
+        W: Write,
+    {
+        let mut buffer = String::new();
+        write!(&mut writer, ">>> ").expect("Unable to write");
+        writer.flush().unwrap();
+        reader
+            .read_line(&mut buffer)
+            .expect("Unable to read line from user");
+        let buffer = buffer.trim();
 
-            match buffer {
-                ".quit" => {
-                    println!("Farewell! Have a great day!");
-                    std::process::exit(0);
+        self.command_buffer.push(buffer.to_string());
+
+        match buffer {
+            ".quit" => {
+                writeln!(&mut writer, "Farewell! Have a great day!")
+                    .expect("Unable to execute .quit");
+                writer.flush().unwrap();
+                true
+            }
+            ".history" => {
+                for command in &self.command_buffer {
+                    writeln!(&mut writer, "{}", command).expect("Unable to execute .history");
+                    writer.flush().unwrap();
                 }
-                ".history" => {
-                    for command in &self.command_buffer {
-                        println!("{}", command);
-                    }
+                false
+            }
+            ".program" => {
+                println!("Listing instructions currently in VM's program vector:");
+                writer.flush().unwrap();
+                for instruction in &self.vm.program {
+                    writeln!(&mut writer, "{}", instruction).expect("Unable to execute .program");
+                    writer.flush().unwrap();
                 }
-                ".program" => {
-                    println!("Listing instructions currently in VM's program vector:");
-                    for instruction in &self.vm.program {
-                        println!("{}", instruction);
-                    }
-                    println!("End of Program Listing");
-                }
-                ".registers" => {
-                    println!("Listing registers and all contents:");
-                    println!("{:#?}", self.vm.registers);
-                    println!("End of Program Listing");
-                }
-                _ => {
-                    let results = self.parse_hex(buffer);
-                    match results {
-                        Ok(bytes) => {
-                            for byte in bytes {
-                                self.vm.add_byte(byte)
-                            }
+                writeln!(&mut writer, "End of Program Listing")
+                    .expect("Unable to write ending message of  .program");
+                writer.flush().unwrap();
+                false
+            }
+            ".registers" => {
+                writeln!(&mut writer, "Listing registers and all contents:")
+                    .expect("Unable to execute .registers");
+                writeln!(&mut writer, "{:#?}", self.vm.registers)
+                    .expect("Unable to write registers");
+                writeln!(&mut writer, "End of Program Listing")
+                    .expect("Unable to write ending message of .registers");
+                writer.flush().unwrap();
+                false
+            }
+            _ => {
+                let results = self.parse_hex(buffer);
+                match results {
+                    Ok(bytes) => {
+                        for byte in bytes {
+                            self.vm.add_byte(byte)
                         }
-                        Err(_e) => {
-                            println!("Unable to decode hex string. Please enter 4 groups of 2 hex charracters.")
-                        }
-                    };
-                    self.vm.run_once();
-                }
+                    }
+                    Err(_e) => {
+                        writeln!(&mut writer, "Unable to decode hex string. Please enter 4 groups of 2 hex charracters.").expect("Unable to write parse_hex error message");
+                        writer.flush().unwrap();
+                    }
+                };
+                self.vm.run_once();
+                false
             }
         }
     }
@@ -102,5 +129,74 @@ mod tests {
         assert_eq!(hex_vec[1], 0x01);
         assert_eq!(hex_vec[2], 0x03);
         assert_eq!(hex_vec[3], 0xE8);
+    }
+
+    #[test]
+    fn test_run_quit() {
+        let input = b".quit";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.run_once(&input[..], &mut output);
+        let output = String::from_utf8(output).expect("Not UTF-8");
+        assert_eq!(">>> Farewell! Have a great day!\n", output);
+    }
+
+    #[test]
+    fn test_run_history() {
+        let input = b".history";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.command_buffer.push(".registers".to_string());
+        test_repl.command_buffer.push(".program".to_string());
+        test_repl.run_once(&input[..], &mut output);
+        let output = String::from_utf8(output).expect("Not UTF-8");
+        assert_eq!(">>> .registers\n.program\n.history\n", output);
+    }
+
+    #[test]
+    fn test_run_program() {
+        let input = b".program";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.vm.program = vec![0, 1, 2, 3];
+        test_repl.run_once(&input[..], &mut output);
+        let output = String::from_utf8(output).expect("Not UTF-8");
+        assert_eq!(">>> 0\n1\n2\n3\nEnd of Program Listing\n", output);
+    }
+
+    #[test]
+    fn test_run_registers() {
+        let input = b".registers";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.vm.registers = [
+            1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5,
+            6, 7, 8,
+        ];
+        test_repl.run_once(&input[..], &mut output);
+        let output = String::from_utf8(output).expect("Not UTF-8");
+        assert_eq!(">>> Listing registers and all contents:\n[\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n]\nEnd of Program Listing\n", output);
+    }
+
+    #[test]
+    fn test_run_parse_hex() {
+        let input = b"00 01 03 E8";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.run_once(&input[..], &mut output);
+        assert_eq!(test_repl.vm.registers[1], 1000);
+    }
+
+    #[test]
+    fn test_run_parse_hex_error() {
+        let input = b"kaboom";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.run_once(&input[..], &mut output);
+        let output = String::from_utf8(output).expect("Not UTF-8");
+        assert_eq!(
+            ">>> Unable to decode hex string. Please enter 4 groups of 2 hex charracters.\n",
+            output
+        );
     }
 }
