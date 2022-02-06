@@ -63,6 +63,18 @@ impl VM {
                 println!("HLT encoutered");
                 return false;
             }
+            Opcode::JMP => {
+                let target = self.registers[self.next_8_bits() as usize];
+                self.pc = target as usize;
+            }
+            Opcode::JMPF => {
+                let value = self.registers[self.next_8_bits() as usize] as usize;
+                self.pc += value;
+            }
+            Opcode::JMPB => {
+                let value = self.registers[self.next_8_bits() as usize] as usize;
+                self.pc -= value;
+            }
             Opcode::IGL => {
                 println!("Illegal instruction encountered");
                 return false;
@@ -218,6 +230,42 @@ mod tests {
         test_vm.run_once(); // DIV
         assert_eq!(test_vm.registers[2], 1);
         assert_eq!(test_vm.remainder, 13);
+    }
+
+    #[test]
+    fn test_opcode_jmp() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 1;
+        test_vm.program = vec![6, 0, 0, 0];
+        test_vm.run_once();
+        assert_eq!(test_vm.pc, 1);
+    }
+
+    #[test]
+    fn test_opcode_jmpf() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 2;
+        test_vm.program = vec![
+            7, /* JMPF */
+            0, /* increment pc by the number the register0 stores (+2) */
+            0, /* pad */
+            0, /* pad */
+        ];
+        test_vm.run_once();
+        assert_eq!(
+            test_vm.pc,
+            4 /* 1. Read JMPF, 2. Read 0, then + 2 = 4 */
+        );
+    }
+
+    #[test]
+    fn test_opcode_jmpb() {
+        let mut test_vm = VM::new();
+        test_vm.registers[1] = 6;
+        test_vm.program = vec![0, 0, 0, 10, 8, 1, 0, 0];
+        test_vm.run_once(); // LOAD: pc += 4
+        test_vm.run_once(); // Read JMPB and target (pc += 2), then JMPB to register1: 6 (pc -= 6)
+        assert_eq!(test_vm.pc, 0);
     }
 
     #[test]
