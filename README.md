@@ -1,4 +1,4 @@
-# Building Language VM [![codecov](https://codecov.io/gh/ymdarake/iridium/branch/master/graph/badge.svg?token=3KJC7P2KR0)](https://codecov.io/gh/ymdarake/iridium)
+# Building Language VM [![codecov](https://codecov.io/gh/ymdarake/iridium/branch/master/graph/badge.svg?token=3KJC7P2KR0)](https://codecov.io/gh/ymdarake/iridium) ![build](https://github.com/ymdarake/iridium/actions/workflows/build.yaml/badge.svg)
 
 Coding along with the blog articles [So You Want to Build a Language VM](https://blog.subnetzero.io/post/building-language-vm-part-01/).
 Big thanks to the author.
