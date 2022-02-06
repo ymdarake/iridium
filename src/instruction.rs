@@ -9,6 +9,13 @@ pub enum Opcode {
     JMP,
     JMPF,
     JMPB,
+    EQ,
+    NEQ,
+    GTE,
+    LTE,
+    LT,
+    GT,
+    JMPE,
     IGL,
 }
 
@@ -26,16 +33,23 @@ impl Instruction {
 impl From<u8> for Opcode {
     fn from(v: u8) -> Self {
         match v {
-            0 => return Opcode::LOAD,
-            1 => return Opcode::ADD,
-            2 => return Opcode::SUB,
-            3 => return Opcode::MUL,
-            4 => return Opcode::DIV,
-            5 => return Opcode::HLT,
-            6 => return Opcode::JMP,
-            7 => return Opcode::JMPF,
-            8 => return Opcode::JMPB,
-            _ => return Opcode::IGL,
+            0 => Opcode::LOAD,
+            1 => Opcode::ADD,
+            2 => Opcode::SUB,
+            3 => Opcode::MUL,
+            4 => Opcode::DIV,
+            5 => Opcode::HLT,
+            6 => Opcode::JMP,
+            7 => Opcode::JMPF,
+            8 => Opcode::JMPB,
+            9 => Opcode::EQ,
+            10 => Opcode::NEQ,
+            11 => Opcode::GT,
+            12 => Opcode::GTE,
+            13 => Opcode::LT,
+            14 => Opcode::LTE,
+            15 => Opcode::JMPE,
+            _ => Opcode::IGL,
         }
     }
 }
