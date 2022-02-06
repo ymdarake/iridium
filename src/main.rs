@@ -4,5 +4,8 @@ pub mod vm;
 
 fn main() {
     let mut repl = repl::REPL::new();
-    repl.run();
+    let stdin = std::io::stdin();
+    let reader = stdin.lock();
+    let writer = std::io::stdout();
+    repl.run(reader, writer);
 }
