@@ -2,11 +2,11 @@ use crate::instruction::Opcode;
 
 pub struct VM {
     /// Array that simulates having hardware registers
-    registers: [i32; 32],
+    pub registers: [i32; 32],
     /// Program counter that tracks which byte is being executed
     pc: usize,
     /// The bytecode of the program being run
-    program: Vec<u8>,
+    pub program: Vec<u8>,
     /// Contains the remainder of modulo division ops
     remainder: usize,
     /// Contains the result of the last comparison operation
@@ -33,6 +33,10 @@ impl VM {
 
     pub fn run_once(&mut self) {
         self.execute_instruction();
+    }
+
+    pub fn add_byte(&mut self, byte: u8) {
+        self.program.push(byte);
     }
 
     fn execute_instruction(&mut self) -> bool {
@@ -162,6 +166,16 @@ mod tests {
     fn test_create_vm() {
         let test_vm = VM::new();
         assert_eq!(test_vm.registers[0], 0)
+    }
+
+    #[test]
+    fn test_add_byte() {
+        let mut test_vm = VM::new();
+        assert_eq!(test_vm.program.len(), 0);
+        test_vm.add_byte(10);
+        assert_eq!(test_vm.program.len(), 1);
+        test_vm.add_byte(0x0C);
+        assert_eq!(test_vm.program.len(), 2);
     }
 
     #[test]
