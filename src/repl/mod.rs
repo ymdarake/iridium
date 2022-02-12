@@ -1,8 +1,10 @@
+use crate::assembler::program_parsers::program;
 pub use crate::vm::VM;
+use nom::types::CompleteStr;
 use std;
 use std::io::{BufRead, Write};
-use std::num::ParseIntError;
-use std::result::Result;
+// use std::num::ParseIntError;
+// use std::result::Result;
 
 pub struct REPL {
     command_buffer: Vec<String>,
@@ -81,56 +83,53 @@ impl REPL {
                 false
             }
             _ => {
-                let results = self.parse_hex(buffer);
-                match results {
-                    Ok(bytes) => {
-                        for byte in bytes {
-                            self.vm.add_byte(byte)
-                        }
-                    }
-                    Err(_e) => {
-                        writeln!(&mut writer, "Unable to decode hex string. Please enter 4 groups of 2 hex charracters.").expect("Unable to write parse_hex error message");
-                        writer.flush().unwrap();
-                    }
-                };
+                let parsed_program = program(CompleteStr(buffer));
+                if !parsed_program.is_ok() {
+                    println!("Unable to parse input");
+                    return true; // done
+                }
+                let (_, result) = parsed_program.unwrap();
+                let bytecode = result.to_bytes();
+                for byte in bytecode {
+                    self.vm.add_byte(byte);
+                }
                 self.vm.run_once();
                 false
             }
         }
     }
 
-    fn parse_hex(&mut self, i: &str) -> Result<Vec<u8>, ParseIntError> {
-        let split = i.split(" ").collect::<Vec<&str>>();
-        let mut results: Vec<u8> = vec![];
-        for hex_string in split {
-            let byte = u8::from_str_radix(&hex_string, 16);
-            match byte {
-                Ok(result) => {
-                    results.push(result);
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(results)
-    }
+    // fn parse_hex(&mut self, i: &str) -> Result<Vec<u8>, ParseIntError> {
+    //     let split = i.split(" ").collect::<Vec<&str>>();
+    //     let mut results: Vec<u8> = vec![];
+    //     for hex_string in split {
+    //         let byte = u8::from_str_radix(&hex_string, 16);
+    //         match byte {
+    //             Ok(result) => {
+    //                 results.push(result);
+    //             }
+    //             Err(e) => return Err(e),
+    //         }
+    //     }
+    //     Ok(results)
+    // }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_parse_hex() {
-        let mut test_repl = REPL::new();
-        let hex_string = "00 01 03 E8";
-        let hex_vec = test_repl.parse_hex(hex_string).unwrap();
-        assert_eq!(hex_vec.len(), 4);
-        assert_eq!(hex_vec[0], 0x00);
-        assert_eq!(hex_vec[1], 0x01);
-        assert_eq!(hex_vec[2], 0x03);
-        assert_eq!(hex_vec[3], 0xE8);
-    }
-
+    // #[test]
+    // fn test_parse_hex() {
+    //     let mut test_repl = REPL::new();
+    //     let hex_string = "00 01 03 E8";
+    //     let hex_vec = test_repl.parse_hex(hex_string).unwrap();
+    //     assert_eq!(hex_vec.len(), 4);
+    //     assert_eq!(hex_vec[0], 0x00);
+    //     assert_eq!(hex_vec[1], 0x01);
+    //     assert_eq!(hex_vec[2], 0x03);
+    //     assert_eq!(hex_vec[3], 0xE8);
+    // }
     #[test]
     fn test_run_quit() {
         let input = b".quit";
@@ -178,25 +177,25 @@ mod tests {
         assert_eq!(">>> Listing registers and all contents:\n[\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n]\nEnd of Program Listing\n", output);
     }
 
-    #[test]
-    fn test_run_parse_hex() {
-        let input = b"00 01 03 E8";
-        let mut output = Vec::new();
-        let mut test_repl = REPL::new();
-        test_repl.run_once(&input[..], &mut output);
-        assert_eq!(test_repl.vm.registers[1], 1000);
-    }
+    // #[test]
+    // fn test_run_parse_hex() {
+    //     let input = b"00 01 03 E8";
+    //     let mut output = Vec::new();
+    //     let mut test_repl = REPL::new();
+    //     test_repl.run_once(&input[..], &mut output);
+    //     assert_eq!(test_repl.vm.registers[1], 1000);
+    // }
 
-    #[test]
-    fn test_run_parse_hex_error() {
-        let input = b"kaboom";
-        let mut output = Vec::new();
-        let mut test_repl = REPL::new();
-        test_repl.run_once(&input[..], &mut output);
-        let output = String::from_utf8(output).expect("Not UTF-8");
-        assert_eq!(
-            ">>> Unable to decode hex string. Please enter 4 groups of 2 hex charracters.\n",
-            output
-        );
-    }
+    // #[test]
+    // fn test_run_parse_hex_error() {
+    //     let input = b"kaboom";
+    //     let mut output = Vec::new();
+    //     let mut test_repl = REPL::new();
+    //     test_repl.run_once(&input[..], &mut output);
+    //     let output = String::from_utf8(output).expect("Not UTF-8");
+    //     assert_eq!(
+    //         ">>> Unable to decode hex string. Please enter 4 groups of 2 hex charracters.\n",
+    //         output
+    //     );
+    // }
 }
