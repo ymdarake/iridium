@@ -17,6 +17,7 @@ named!(pub register <CompleteStr, Token>,
     )
 );
 
+#[cfg(test)]
 mod tests {
 
     use super::*;
