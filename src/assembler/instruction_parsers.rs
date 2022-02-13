@@ -116,7 +116,8 @@ named!(pub instruction<CompleteStr, AssemblerInstruction>,
     do_parse!(
         ins: alt!(
             instruction_one |
-            instruction_two
+            instruction_two |
+            instruction_three
         ) >>
         (
             ins
