@@ -131,6 +131,11 @@ impl VM {
                     // TODO: fix the bits
                 }
             }
+            Opcode::NOP => {
+                self.next_8_bits();
+                self.next_8_bits();
+                self.next_8_bits();
+            }
             Opcode::IGL => {
                 println!("Illegal instruction encountered");
                 return false;
