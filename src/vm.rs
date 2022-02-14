@@ -43,7 +43,7 @@ impl VM {
 
     fn execute_instruction(&mut self) -> bool {
         if self.pc >= self.program.len() {
-            return false;
+            return true;
         }
         match self.decode_opcode() {
             Opcode::LOAD => {
@@ -74,7 +74,7 @@ impl VM {
             }
             Opcode::HLT => {
                 println!("HLT encoutered");
-                return false;
+                return true;
             }
             Opcode::JMP => {
                 let target = self.registers[self.next_8_bits() as usize];
@@ -147,28 +147,28 @@ impl VM {
             }
             Opcode::IGL => {
                 println!("Illegal instruction encountered");
-                return false;
+                return true;
             }
         }
-        true
+        false
     }
 
     fn decode_opcode(&mut self) -> Opcode {
         let opcode = Opcode::from(self.program[self.pc]);
         self.pc += 1;
-        return opcode;
+        opcode
     }
 
     fn next_8_bits(&mut self) -> u8 {
         let result = self.program[self.pc];
         self.pc += 1;
-        return result;
+        result
     }
 
     fn next_16_bits(&mut self) -> u16 {
         let result = ((self.program[self.pc] as u16) << 8) | self.program[self.pc + 1] as u16;
         self.pc += 2;
-        return result;
+        result
     }
 }
 
