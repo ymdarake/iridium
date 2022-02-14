@@ -465,15 +465,6 @@ mod tests {
     }
 
     #[test]
-    fn test_opcode_igl() {
-        let mut test_vm = VM::new();
-        let test_bytes = vec![200, 0, 0, 0];
-        test_vm.program = test_bytes;
-        test_vm.run_once();
-        assert_eq!(test_vm.pc, 1);
-    }
-
-    #[test]
     fn test_opcode_aloc() {
         let mut test_vm = VM::new();
         test_vm.registers[0] = 1024;
@@ -481,5 +472,32 @@ mod tests {
         test_vm.run_once();
         assert_eq!(test_vm.heap.len(), 1024);
         // TODO: 2: ref TODO 1
+    }
+
+    #[test]
+    fn test_opcode_inc() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 4;
+        test_vm.program = vec![18, 0, 0, 0];
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[0], 5);
+    }
+
+    #[test]
+    fn test_opcode_dec() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 4;
+        test_vm.program = vec![19, 0, 0, 0];
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[0], 3);
+    }
+
+    #[test]
+    fn test_opcode_igl() {
+        let mut test_vm = VM::new();
+        let test_bytes = vec![200, 0, 0, 0];
+        test_vm.program = test_bytes;
+        test_vm.run_once();
+        assert_eq!(test_vm.pc, 1);
     }
 }
