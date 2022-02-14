@@ -17,25 +17,22 @@ impl AssemblerInstruction {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut results = vec![];
         match self.opcode {
-            Token::Op { code } => match code {
-                _ => {
-                    results.push(code as u8);
-                }
-            },
+            Token::Op { code } => {
+                results.push(code as u8);
+            }
             _ => {
                 println!("Non-opcode found in opcode field");
                 std::process::exit(1);
             }
         };
 
-        for operand in vec![&self.operand1, &self.operand2, &self.operand3] {
-            match operand {
-                Some(t) => AssemblerInstruction::extract_operand(t, &mut results),
-                None => {}
+        for operand in &[&self.operand1, &self.operand2, &self.operand3] {
+            if let Some(token) = operand {
+                AssemblerInstruction::extract_operand(token, &mut results)
             }
         }
 
-        return results;
+        results
     }
 
     fn extract_operand(t: &Token, results: &mut Vec<u8>) {
@@ -138,7 +135,6 @@ mod tests {
             Ok((
                 CompleteStr(""),
                 AssemblerInstruction {
-                    // label: None,
                     opcode: Token::Op { code: Opcode::LOAD },
                     operand1: Some(Token::Register { reg_num: 0 }),
                     operand2: Some(Token::IntegerOperand { value: 100 }),

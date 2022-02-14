@@ -22,7 +22,7 @@ named!(pub program<CompleteStr, Program>,
         instructions: many1!(instruction) >>
         (
             Program {
-                instructions: instructions
+                instructions
             }
         )
     )

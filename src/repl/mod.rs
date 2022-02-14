@@ -1,8 +1,8 @@
 use crate::assembler::program_parsers::program;
 pub use crate::vm::VM;
-use nom::types::CompleteStr;
 use std;
 use std::io::{BufRead, Write};
+use std::num::ParseIntError;
 // use std::num::ParseIntError;
 // use std::result::Result;
 
@@ -83,36 +83,35 @@ impl REPL {
                 false
             }
             _ => {
-                let parsed_program = program(CompleteStr(buffer));
-                if !parsed_program.is_ok() {
-                    println!("Unable to parse input");
-                    return true; // done
-                }
-                let (_, result) = parsed_program.unwrap();
-                let bytecode = result.to_bytes();
-                for byte in bytecode {
-                    self.vm.add_byte(byte);
-                }
+                let program = match program(buffer.into()) {
+                    Ok((_, program)) => program,
+                    Err(_) => {
+                        println!("Unable to parse input");
+                        return true;
+                    }
+                };
+                self.vm.program.append(&mut program.to_bytes());
                 self.vm.run_once();
                 false
             }
         }
     }
 
-    // fn parse_hex(&mut self, i: &str) -> Result<Vec<u8>, ParseIntError> {
-    //     let split = i.split(" ").collect::<Vec<&str>>();
-    //     let mut results: Vec<u8> = vec![];
-    //     for hex_string in split {
-    //         let byte = u8::from_str_radix(&hex_string, 16);
-    //         match byte {
-    //             Ok(result) => {
-    //                 results.push(result);
-    //             }
-    //             Err(e) => return Err(e),
-    //         }
-    //     }
-    //     Ok(results)
-    // }
+    #[allow(dead_code)]
+    fn parse_hex(&mut self, i: &str) -> Result<Vec<u8>, ParseIntError> {
+        let split = i.split(' ').collect::<Vec<&str>>();
+        let mut results: Vec<u8> = vec![];
+        for hex_string in split {
+            let byte = u8::from_str_radix(hex_string, 16);
+            match byte {
+                Ok(result) => {
+                    results.push(result);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(results)
+    }
 }
 
 #[cfg(test)]
