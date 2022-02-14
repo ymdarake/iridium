@@ -1,23 +1,25 @@
+use super::directive_parsers::directive;
+use super::label_parsers::label_declaration;
 use super::opcode_parsers::opcode;
-use super::operand_parsers::integer_operand;
-use super::register_parsers::register;
+use super::operand_parsers::operand;
 use super::Token;
-use nom::multispace;
 use nom::types::CompleteStr;
 
 #[derive(Debug, PartialEq)]
 pub struct AssemblerInstruction {
-    opcode: Token,
-    operand1: Option<Token>,
-    operand2: Option<Token>,
-    operand3: Option<Token>,
+    pub opcode: Option<Token>,
+    pub label: Option<Token>,
+    pub directive: Option<Token>,
+    pub operand1: Option<Token>,
+    pub operand2: Option<Token>,
+    pub operand3: Option<Token>,
 }
 
 impl AssemblerInstruction {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut results = vec![];
         match self.opcode {
-            Token::Op { code } => {
+            Some(Token::Op { code }) => {
                 results.push(code as u8);
             }
             _ => {
@@ -55,69 +57,36 @@ impl AssemblerInstruction {
     }
 }
 
-// TODO: rename all macro-defined parses to represent their meanings
-// Handles instructions of the following form:
-// LOAD $0 #100
-named!(instruction_one<CompleteStr, AssemblerInstruction>,
-    do_parse!(
-        o: opcode >>
-        r: register >>
-        i: integer_operand >>
-        (
-            AssemblerInstruction{
-                opcode: o,
-                operand1: Some(r),
-                operand2: Some(i),
-                operand3: None
-            }
-        )
-    )
-);
-
-// typo in the blog post part 10. this is 'the' instruction_two parser
-named!(instruction_two<CompleteStr, AssemblerInstruction>,
-    do_parse!(
-        o: opcode >>
-        opt!(multispace) >>
-        (
-            AssemblerInstruction{
-                opcode: o,
-                operand1: None,
-                operand2: None,
-                operand3: None
-            }
-        )
-    )
-);
-
-// homework form the blog post part 10
-// parses '<opcode> <register> <register> <register>'
-named!(instruction_three<CompleteStr, AssemblerInstruction>,
-    do_parse!(
-        o: opcode >>
-        r1: register >>
-        r2: register >>
-        r3: register >>
-        (
-            AssemblerInstruction{
-                opcode: o,
-                operand1: Some(r1),
-                operand2: Some(r2),
-                operand3: Some(r3)
-            }
-        )
-    )
-);
-
+// Will try to parse out any of the Instruction forms
 named!(pub instruction<CompleteStr, AssemblerInstruction>,
     do_parse!(
         ins: alt!(
-            instruction_one |
-            instruction_two |
-            instruction_three
+            // NOTE: probably typo in the post part13: 'instruction' here causes infinite loop.
+            instruction_combined |
+            directive
         ) >>
         (
             ins
+        )
+    )
+);
+
+named!(instruction_combined<CompleteStr, AssemblerInstruction>,
+    do_parse!(
+        l: opt!(label_declaration) >>
+        o: opcode >>
+        o1: opt!(operand) >>
+        o2: opt!(operand) >>
+        o3: opt!(operand) >>
+        (
+            AssemblerInstruction{
+                opcode: Some(o),
+                label: l,
+                directive: None,
+                operand1: o1,
+                operand2: o2,
+                operand3: o3,
+            }
         )
     )
 );
@@ -129,13 +98,15 @@ mod tests {
 
     #[test]
     fn test_parse_instruction_form_one() {
-        let result = instruction_one(CompleteStr("load $0 #100\n"));
+        let result = instruction_combined(CompleteStr("load $0 #100\n"));
         assert_eq!(
             result,
             Ok((
                 CompleteStr(""),
                 AssemblerInstruction {
-                    opcode: Token::Op { code: Opcode::LOAD },
+                    opcode: Some(Token::Op { code: Opcode::LOAD }),
+                    label: None,
+                    directive: None,
                     operand1: Some(Token::Register { reg_num: 0 }),
                     operand2: Some(Token::IntegerOperand { value: 100 }),
                     operand3: None
@@ -146,13 +117,15 @@ mod tests {
 
     #[test]
     fn test_parse_instruction_form_two() {
-        let result = instruction_two(CompleteStr("hlt\n"));
+        let result = instruction_combined(CompleteStr("hlt"));
         assert_eq!(
             result,
             Ok((
                 CompleteStr(""),
                 AssemblerInstruction {
-                    opcode: Token::Op { code: Opcode::HLT },
+                    opcode: Some(Token::Op { code: Opcode::HLT }),
+                    label: None,
+                    directive: None,
                     operand1: None,
                     operand2: None,
                     operand3: None
@@ -163,13 +136,15 @@ mod tests {
 
     #[test]
     fn test_parse_instruction_form_three() {
-        let result = instruction_three(CompleteStr("add $0 $1 $2\n"));
+        let result = instruction(CompleteStr("add $0 $1 $2\n"));
         assert_eq!(
             result,
             Ok((
                 CompleteStr(""),
                 AssemblerInstruction {
-                    opcode: Token::Op { code: Opcode::ADD },
+                    opcode: Some(Token::Op { code: Opcode::ADD }),
+                    label: None,
+                    directive: None,
                     operand1: Some(Token::Register { reg_num: 0 }),
                     operand2: Some(Token::Register { reg_num: 1 }),
                     operand3: Some(Token::Register { reg_num: 2 }),
