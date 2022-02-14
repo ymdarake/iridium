@@ -133,6 +133,11 @@ impl VM {
                     // TODO: fix the bits
                 }
             }
+            Opcode::NOP => {
+                self.next_8_bits();
+                self.next_8_bits();
+                self.next_8_bits();
+            }
             Opcode::ALOC => {
                 let register = self.next_8_bits() as usize;
                 let bytes = self.registers[register];
@@ -140,8 +145,15 @@ impl VM {
                 self.heap.resize(new_end as usize, 0);
                 // TODO: 1: check: Don't we need to read next 16 bits here?
             }
-            Opcode::NOP => {
+            Opcode::INC => {
+                let register_number = self.next_8_bits() as usize;
+                self.registers[register_number] += 1;
                 self.next_8_bits();
+                self.next_8_bits();
+            }
+            Opcode::DEC => {
+                let register_number = self.next_8_bits() as usize;
+                self.registers[register_number] -= 1;
                 self.next_8_bits();
                 self.next_8_bits();
             }
