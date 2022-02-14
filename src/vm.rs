@@ -3,10 +3,11 @@ use crate::instruction::Opcode;
 pub struct VM {
     /// Array that simulates having hardware registers
     pub registers: [i32; 32],
-    /// Program counter that tracks which byte is being executed
-    pc: usize,
     /// The bytecode of the program being run
     pub program: Vec<u8>,
+    heap: Vec<u8>,
+    /// Program counter that tracks which byte is being executed
+    pc: usize,
     /// Contains the remainder of modulo division ops
     remainder: usize,
     /// Contains the result of the last comparison operation
@@ -18,6 +19,7 @@ impl VM {
         VM {
             registers: [0; 32],
             program: vec![],
+            heap: vec![],
             pc: 0,
             remainder: 0,
             equal_flag: false,
@@ -130,6 +132,13 @@ impl VM {
                 } else {
                     // TODO: fix the bits
                 }
+            }
+            Opcode::ALOC => {
+                let register = self.next_8_bits() as usize;
+                let bytes = self.registers[register];
+                let new_end = self.heap.len() as i32 + bytes;
+                self.heap.resize(new_end as usize, 0);
+                // TODO: 1: check: Don't we need to read next 16 bits here?
             }
             Opcode::NOP => {
                 self.next_8_bits();
@@ -450,5 +459,15 @@ mod tests {
         test_vm.program = test_bytes;
         test_vm.run_once();
         assert_eq!(test_vm.pc, 1);
+    }
+
+    #[test]
+    fn test_opcode_aloc() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 1024;
+        test_vm.program = vec![17, 0, 0, 0];
+        test_vm.run_once();
+        assert_eq!(test_vm.heap.len(), 1024);
+        // TODO: 2: ref TODO 1
     }
 }
