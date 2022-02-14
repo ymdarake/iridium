@@ -1,8 +1,12 @@
+use nom::types::CompleteStr;
+
 use crate::assembler::program_parsers::program;
 pub use crate::vm::VM;
 use std;
-use std::io::{BufRead, Write};
+use std::fs::File;
+use std::io::{BufRead, Read, Write};
 use std::num::ParseIntError;
+use std::path::Path;
 // use std::num::ParseIntError;
 // use std::result::Result;
 
@@ -80,6 +84,33 @@ impl REPL {
                 writeln!(&mut writer, "End of Program Listing")
                     .expect("Unable to write ending message of .registers");
                 writer.flush().unwrap();
+                false
+            }
+            ".load_file" => {
+                write!(
+                    &mut writer,
+                    "Please enter the path to the file you wish to load: "
+                )
+                .unwrap();
+                writer.flush().unwrap();
+                let mut tmp = String::new();
+                reader
+                    .read_line(&mut tmp)
+                    .expect("Unable to read line from user");
+                let tmp = tmp.trim();
+                let filename = Path::new(&tmp);
+                let mut f = File::open(Path::new(&filename)).expect("File not found");
+                let mut contents = String::new();
+                f.read_to_string(&mut contents)
+                    .expect("There was an error reading from the file");
+                let program = match program(CompleteStr(&contents)) {
+                    Ok((_remainder, program)) => program,
+                    Err(e) => {
+                        writeln!(&mut writer, "Unable to parse input: {:?}", e).unwrap();
+                        return false;
+                    }
+                };
+                self.vm.program.append(&mut program.to_bytes());
                 false
             }
             _ => {
@@ -174,6 +205,15 @@ mod tests {
         test_repl.run_once(&input[..], &mut output);
         let output = String::from_utf8(output).expect("Not UTF-8");
         assert_eq!(">>> Listing registers and all contents:\n[\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n    7,\n    8,\n]\nEnd of Program Listing\n", output);
+    }
+
+    #[test]
+    fn test_run_load_file() {
+        let input = b".load_file\ntest.pie\n.quit\n";
+        let mut output = Vec::new();
+        let mut test_repl = REPL::new();
+        test_repl.run_once(&input[..], &mut output);
+        assert_eq!(test_repl.vm.program, vec![0, 0, 0, 100]);
     }
 
     // #[test]
