@@ -1,6 +1,7 @@
 use nom::types::CompleteStr;
 
 use crate::assembler::program_parsers::program;
+use crate::assembler::Assembler;
 pub use crate::vm::VM;
 use std;
 use std::fs::File;
@@ -13,6 +14,7 @@ use std::path::Path;
 pub struct REPL {
     command_buffer: Vec<String>,
     vm: VM,
+    asm: Assembler,
 }
 
 impl REPL {
@@ -20,6 +22,7 @@ impl REPL {
         REPL {
             vm: VM::new(),
             command_buffer: vec![],
+            asm: Assembler::new(),
         }
     }
 
@@ -110,7 +113,9 @@ impl REPL {
                         return false;
                     }
                 };
-                self.vm.program.append(&mut program.to_bytes());
+                self.vm
+                    .program
+                    .append(&mut program.to_bytes(&self.asm.symbol_table));
                 false
             }
             _ => {
@@ -121,7 +126,9 @@ impl REPL {
                         return true;
                     }
                 };
-                self.vm.program.append(&mut program.to_bytes());
+                self.vm
+                    .program
+                    .append(&mut program.to_bytes(&self.asm.symbol_table));
                 self.vm.run_once();
                 false
             }

@@ -2,8 +2,11 @@ use super::directive_parsers::directive;
 use super::label_parsers::label_declaration;
 use super::opcode_parsers::opcode;
 use super::operand_parsers::operand;
-use super::Token;
+use super::{SymbolTable, Token};
 use nom::types::CompleteStr;
+
+const MAX_I16: i32 = 32768;
+const MIN_I16: i32 = -32768;
 
 #[derive(Debug, PartialEq)]
 pub struct AssemblerInstruction {
@@ -16,7 +19,7 @@ pub struct AssemblerInstruction {
 }
 
 impl AssemblerInstruction {
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, symbols: &SymbolTable) -> Vec<u8> {
         let mut results = vec![];
         match self.opcode {
             Some(Token::Op { code }) => {
@@ -35,6 +38,28 @@ impl AssemblerInstruction {
         }
 
         results
+    }
+
+    pub fn is_label(&self) -> bool {
+        self.label.is_some()
+    }
+
+    pub fn is_opcode(&self) -> bool {
+        self.opcode.is_some()
+    }
+
+    pub fn is_directive(&self) -> bool {
+        self.directive.is_some()
+    }
+
+    pub fn get_label_name(&self) -> Option<String> {
+        match &self.label {
+            Some(l) => match l {
+                Token::LabelDeclaration { name } => Some(name.clone()),
+                _ => None,
+            },
+            None => None,
+        }
     }
 
     fn extract_operand(t: &Token, results: &mut Vec<u8>) {
