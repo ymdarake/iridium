@@ -1,4 +1,4 @@
-use crate::instruction::Opcode;
+use crate::{assembler, instruction::Opcode};
 
 pub struct VM {
     /// Array that simulates having hardware registers
@@ -27,6 +27,9 @@ impl VM {
     }
 
     pub fn run(&mut self) {
+        if !self.verify_header() {
+            std::process::exit(1);
+        }
         let mut is_done = false;
         while !is_done {
             is_done = self.execute_instruction();
@@ -39,6 +42,10 @@ impl VM {
 
     pub fn add_byte(&mut self, byte: u8) {
         self.program.push(byte);
+    }
+
+    pub fn add_bytes(&mut self, mut bytes: Vec<u8>) {
+        self.program.append(&mut bytes);
     }
 
     fn execute_instruction(&mut self) -> bool {
@@ -182,11 +189,32 @@ impl VM {
         self.pc += 2;
         result
     }
+
+    fn verify_header(&self) -> bool {
+        if self.program[0..4] != assembler::PIE_HEADER_PREFIX {
+            return false;
+        }
+        true
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::assembler::{PIE_HEADER_LENGTH, PIE_HEADER_PREFIX};
+
     use super::*;
+
+    fn prepend_header(mut b: Vec<u8>) -> Vec<u8> {
+        let mut prepension = vec![];
+        for byte in PIE_HEADER_PREFIX.into_iter() {
+            prepension.push(byte.clone());
+        }
+        while prepension.len() <= PIE_HEADER_LENGTH {
+            prepension.push(0);
+        }
+        prepension.append(&mut b);
+        prepension
+    }
 
     #[test]
     fn test_create_vm() {
@@ -288,6 +316,8 @@ mod tests {
             1,   /* and register 1: 255 */
             2,   /* store in register 2*/
         ];
+        test_vm.program = prepend_header(test_vm.program);
+        test_vm.pc += 65;
         test_vm.run_once(); // LOAD
         assert_eq!(test_vm.registers[0], 268);
         test_vm.run_once(); // LOAD
